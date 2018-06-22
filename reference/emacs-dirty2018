@@ -1,0 +1,481 @@
+;; Source: /users/barrie/lisp/sqf-extras.el,v $
+;; $Revision: 1.2 $
+;;
+;; Some very basic extensions for SQF site
+
+;; emacs backspace
+;; TODO: Sort out xemacs/emacs config
+;;(normal-erase-is-backspace-mode 0)
+
+
+;; (keyboard-translate ?\C-h ?\C-?)
+
+(defun kill-whole-line (arg)
+  "Kills the entire current line"
+  (interactive "P")
+  (let ((kill-whole-line 't)) (beginning-of-line) (kill-line arg))
+  )
+
+(defun insert-new-line ()
+  "Inserts a new line and positions the cursor at the beginning of the line"
+  (interactive)
+  (beginning-of-line)
+  (open-line 1)
+  )
+
+(defun trim-buffer ()
+  "Eliminate trailing whitespace on each line."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "[ \t][ \t]*$" nil t)
+      (delete-region (match-beginning 0) (point)))))
+
+(defun collapse-buffer ()
+  "Collapse multiple blank lines."
+  (interactive)
+  (save-excursion
+    (while (re-search-forward "\n\n+$" nil t)
+      (delete-region (match-beginning 0) (point))
+      (open-line 1)
+      )
+    )
+  )
+
+(defun selective-display (arg)
+  (interactive "NSelective display level?")
+  "Interactive front-end to set-selective-display"
+  (set-selective-display arg)
+)
+
+;;(provide 'sqf-extras)
+
+
+
+
+; SQF Site Customization
+; Barrie Spence
+; 22-August-1995
+
+; Remove the MH Mail menu item
+
+;(delete-menu-item '("Apps" "Read Mail (MH)..."))
+
+; Set default nntp server host & domain
+
+(setq gnus-nntp-server "news")
+(setq gnus-local-domain "britain.agilent.com")
+
+; Disable the rmail command
+
+(put 'rmail 'disabled t)
+
+;; sqf-extras is in lib/xemacs/site-lisp
+;;
+;;(require 'sqf-extras)
+
+(require 'clearcase)
+
+;; Handle compressed, gzipped and encrypted files
+;; - the appropriate commands need to be in your shell PATH.
+;;
+(require 'crypt)
+
+;; Assume binary files aren't encrypted
+;;
+(setq crypt-never-ever-decrypt t)
+
+; Suppress font-not-found warnings for XEmacs
+(setq display-warning-suppressed-classes '(key-mapping font))
+
+; Enable font customizations to be saved with save-options
+(setq options-save-faces t)
+
+(cond
+   ((eq window-system 'x)
+    ;; Only when running under X11:
+    ;;
+    (autoload 'mwheel-install "mwheel" "Enable mouse wheel support.")
+    (mwheel-install)
+
+    ;; Bind some HP keys
+    ;;
+    (global-set-key 'home 'beginning-of-buffer)
+    (global-set-key '(shift home) 'end-of-buffer)
+    (global-set-key 'hpDeleteChar 'delete-char)
+    (global-set-key 'select 'activate-region)
+    (global-set-key 'hpInsertChar 'overwrite-mode)
+
+    ;; See site-lisp/sqf-extras.el for the definitions of
+    ;; selective-display, insert-new-line & kill-whole line
+    ;;
+    (global-set-key '(shift select) 'selective-display)
+    (global-set-key 'hpInsertLine 'insert-new-line)
+    (global-set-key 'hpDeleteLine 'kill-whole-line)
+    )
+   )
+
+(setq auto-mode-alist
+   (append '(("\\.vhdl?$"  . vhdl-mode)   ; to edit VHDL code
+            ) auto-mode-alist))
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; TRAMP (remote edit)  (only really useful for home).
+;
+; \<Server>:<file 
+;  \hpqs0314:.profile
+; \lukerob@hpqs0314:/profile
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-to-list 'load-path "c:/program files/emacs-21.2/lisp/tramp-2.0.30/lisp/")
+(add-to-list 'load-path "c:/program files/emacs-21.2/lisp/tramp-2.0.30/contrib/")
+(require 'tramp)
+
+(setq tramp-default-method "pscp")
+
+
+(setq-default indent-tabs-mode nil)
+
+(setq-default show-trailing-whitespace t)
+
+
+;; Add our setup routines to the mode startup functions
+;;
+(add-hook 'cperl-mode-hook 'cperl-setup)
+(add-hook 'perl-mode-hook 'cperl-setup)
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun my-c++-mode-common-hook ()
+
+  (setq c-block-comments-indent-p nil)
+  (setq c-hanging-braces-alist '((brace-list-open)))
+  
+  (setq show-trailing-whitespace 't)
+
+  (c-toggle-hungry-state 1)
+  (c-toggle-auto-state -1)
+  
+  (local-set-key "\^c\^c" 'compile)
+  (local-set-key "\^c\^n" 'next-error)
+  
+  ;; c++ mode inherits?
+  (setq c-font-lock-extra-types '("Iss[a-zA-Z0-9]*" "iss[a-zA-Z0-9]*" "Tsd[a-zA-Z0-9]*" "Fam[a-zA-Z]" "tsd[a-zA-Z0-9]*" "uint8_t" "uint[0-9]*" "ulong[0-9]*" "string"))
+  (setq c++-font-lock-extra-types c-font-lock-extra-types)
+  
+  (hack-local-variables)
+  (if typedefs (add-extra-type (make-regexp typedefs)))
+  
+  )
+
+(add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
+(add-hook 'c++-mode-common-hook 'my-c-mode-common-hook)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; BAZ's perl setup...
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun perl-setup ()
+  (local-set-key [f5] 'describe-perl-symbol)
+  
+  (setq perl-indent-level 2
+	perl-continued-statement-offset 0
+	perl-continued-brace-offset 0
+	perl-brace-offset 0
+	perl-brace-imaginary-offset 0
+	perl-label-offset 0)
+  )
+
+;; Add our setup routines to the mode startup functions
+;;
+(add-hook 'perl-mode-hook 'perl-setup)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; BAZ's perl setup...
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;(defun python-setup () 
+;  (setq python-indent 2
+;        )
+;  )
+
+;; Add our setup routines to the mode startup functions
+;;
+(add-hook 'python-mode-hook 'python-setup)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; MYSTUFF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Make searches case insensitive
+(setq case-fold-search t)
+
+
+
+;;
+;; Modify the auto mode suffixes...
+;;
+(setq auto-mode-alist
+      (append
+       (list
+	'("\\.profile" . ksh-mode)
+	'("\\.kshrc" . ksh-mode)
+	'("\\.sh$" . ksh-mode)
+	'("\\.ksh$" . ksh-mode)
+	'("\\.js$" . java-mode)
+	'("\\.awk$" . awk-mode)
+	'("\\.tmpl$" . html-mode)
+	'("\[Mm\]akefile" . makefile-mode)
+	)
+       auto-mode-alist))
+
+
+;; highlight during query
+(setq query-replace-highlight t)        
+;; highlight incremental search
+(setq search-highlight t)               
+
+;; Open unidentified files in text mode
+(setq default-major-mode 'text-mode)
+
+(setq text-mode-hook 'turn-on-auto-fill)
+(put 'eval-expression 'disabled nil)
+
+
+;; ---------------------------------------------------------------------------
+;; Don't wrap long lines.
+;; ---------------------------------------------------------------------------
+(set-default 'truncate-lines t)
+
+;; ---------------------------------------------------------------------------
+;; Nevertheless I'd like to have the possibility to see what is out of my
+;; view.
+;; ---------------------------------------------------------------------------
+;;(require 'auto-show)
+;;(auto-show-mode 1)
+;;(setq-default auto-show-mode t)
+
+;; ---------------------------------------------------------------------------
+;; Make the region visible (but only up to the next operation on it)
+;; ---------------------------------------------------------------------------
+(setq transient-mark-mode t)
+
+;;; The mode line (bar at the bottom)
+;(add-hook 'font-lock-mode-hook
+;          '(lambda ()
+;             (set-face-background 'modeline               "lavenderblush")
+;             (set-face-foreground 'modeline               "darkgoldenrod")
+;             (set-face-foreground 'modeline-buffer-id     "midnightblue")
+;;;             (set-face-foreground 'modeline-mousable      "tomato")
+;))
+
+; don't make pesky backup files
+(setq make-backup-files nil)
+
+
+;;run the current perl program
+(defun run-perl ()
+  (interactive "*")
+  (setq perl-buffer-name buffer-file-name)
+  (shell)
+  (setq perl-run-command "perl ")
+  (insert perl-run-command)
+  (insert perl-buffer-name)
+)
+
+;;debug the current perl program
+(defun debug-perl ()
+  (interactive "*")
+  (setq perl-buffer-name buffer-file-name)
+  (shell)
+  (setq perl-run-command "perl -d ")
+  (insert perl-run-command)
+  (insert perl-buffer-name)
+)
+
+;;ASCII table function
+(defun ascii-table ()
+  "Print the ascii table. Based on a defun by Alex Schroeder <asc@bsiag.com>"
+  (interactive)  (switch-to-buffer "*ASCII*")  (erase-buffer)
+  (insert (format "ASCII characters up to number %d.\n" 254))  (let ((i 0))
+    (while (< i 254)      (setq i (+ i 1))
+      (insert (format "%4d %c\n" i i))))  (beginning-of-buffer))
+
+
+
+;; ---------------------------------------------------------------------------
+;; Hot keys (print this information for reference):
+;; ---------------------------------------------------------------------------
+;;          F1 - Goto line
+;;    Shift-F1 - View emacs FAQ
+;;          F2 - Comment highlighted region (highlight a region first!)
+;; Shift-F2 F2 - Uncomment highlighted region (highlight a commented region first!)
+;;          F3 - Switch to a command prompt shell
+;;          F4 - Correctly indent a highlighted region (highlight a region first!)
+;;          F5 - Goto next window (buffer)
+;;    Shift-F5 - Show all available colours
+;;          F6 - Other window (when in split window mode)
+;;    Shift-F6 - Replace text
+;;          F7 - Insert the perl code: print "\n";
+;;    Shift-F7 - Insert the perl code: or die " : $!";
+;;          F8 - Run the current perl code
+;;          F8 - Debug the current perl code (Requires the ActiveState perl debugger)
+;;          F9 - Spilt window
+;;         F10 - Unspilt window
+;;         F11 - Replace text
+;;         F12 - Undo
+
+;; PC Function Keys
+(global-set-key [f1] 'goto-line) 
+;(global-set-key [(shift f1)] 'view-emacs-FAQ)
+(global-set-key [f2] 'comment-region) 
+(global-set-key [(shift f2)] 'universal-argument) ;uncomment is Shift-F2 F2 
+(global-set-key [f3] 'shell) 
+(global-set-key [f4] 'indent-region)
+;(global-set-key [(shift f4)] 'wrap-all-lines) 
+(global-set-key [f5] 'bury-buffer)
+(global-set-key [(shift f5)] 'list-colors-display)
+;; WARNING: f6 is set by pc-selection-mode
+;;(global-set-key [(shift f6)] ') 
+(global-set-key [f7] 'compile)
+;(global-set-key [f7] 'insert-perl-print)
+;(global-set-key [(shift f7)] 'insert-perl-die)
+;(global-set-key [f8] 'run-perl) 
+(global-set-key [(shift f8)] 'debug-perl) 
+(global-set-key [f9] 'split-window-vertically)
+(global-set-key [f10] 'delete-other-windows) ; unsplit window
+(global-set-key [f11] 'query-replace)
+;(global-set-key [f12] 'undo)
+;(global-set-key [(shift f12)] 'open-dot-emacs)
+
+(global-set-key (kbd "C-c f") 'paren-forward-sexp)
+(global-set-key (kbd "C-c b") 'paren-backward-sexp)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; XEMACS config:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(custom-set-variables
+ '(paren-mode (quote paren) nil (paren))
+ '(load-home-init-file t t)
+ '(column-number-mode t)
+ '(line-number-mode t)
+ '(frame-background-mode (quote dark))
+ '(user-mail-address "luke_robertson@keysight.com" t)
+ '(query-user-mail-address nil)
+ '(compile-command "/projects/issBuildTools/external/bin/subdir_make -J 10 ISS_TARGET=MV3")
+;; '(c++-mode-hook nil)
+ '(font-lock-mode t nil (font-lock)))
+
+;(custom-set-faces
+;; '(default ((t (:foreground "skyblue" :background "midnight blue"))) t)
+;; '(default ((t (:foreground "black" :background "white"))) t)
+;; '(font-lock-string-face ((((class color)) (:foreground "plum"))))
+;; '(font-lock-doc-face ((((class color)) (:foreground "darkorange"))))
+;; '(region ((((class color)) (:background "steelblue"))))
+;; '(custom-group-tag-face ((((class color) (background light)) (:foreground "BlueViolet" :underline t))))
+;; '(font-lock-preprocessor-face ((((class color) (background light)) (:foreground "blueviolet"))))
+;; '(font-lock-variable-name-face ((((class color)) (:foreground "thistle"))))
+;; '(custom-state-face ((((class color) (background light)) (:foreground "DarkOliveGreen4"))))
+;; '(font-lock-warning-face ((((class color)) (:foreground "orangered"))))
+;; '(font-lock-keyword-face ((((class color)) (:foreground "orange"))))
+;; '(font-lock-builtin-face ((((class color)) (:foreground "mediumorchid"))))
+;; '(font-lock-constant-face ((((class color)) (:foreground "maroon"))))
+;; '(font-lock-type-face ((((class color)) (:foreground "mediumpurple"))))
+;; '(font-lock-comment-face ((((class color)) (:foreground "aquamarine"))))
+;; '(font-lock-function-name-face ((((class color)) (:foreground "plum"))))
+;; '(highlight ((((class color)) (:background "green1"))) t)
+;; '(modeline ((t (:foreground "goldenrod" :background "midnight blue"))) t)
+;; '(zmacs-region ((((class color)) (:background "steelblue"))) t))
+
+;; '(default ((t (:foreground "darkblue" :background "whitesmoke" :family "Courier New"))) t)
+; '(default ((t (:foreground "gray75" :background "black"))) t)
+; '(default ((t (:foreground "thistle" :background "black"))) t)
+
+;; Norman's:
+;; '(default ((t (:foreground "thistle" :background "#2e3436"))) t)
+; '(font-lock-string-face ((((class color)) (:foreground "chocolate"))))
+; '(font-lock-doc-face ((((class color)) (:foreground "slateblue"))))
+; '(region ((((class color)) (:background "dimgray"))))
+; '(custom-group-tag-face ((((class color) (background light)) (:foreground "blueviolet" :underline t))))
+; '(font-lock-preprocessor-face ((((class color) (background light)) (:foreground "blueviolet"))))
+; '(font-lock-variable-name-face ((((class color)) (:foreground "purple"))))
+; '(custom-state-face ((((class color) (background light)) (:foreground "darkgreen"))))
+; '(font-lock-warning-face ((((class color)) (:foreground "orangered"))))
+; '(font-lock-keyword-face ((((class color)) (:foreground "steelblue"))))
+; '(font-lock-builtin-face ((((class color)) (:foreground "yellow"))))
+; '(font-lock-constant-face ((((class color)) (:foreground "maroon"))))
+; '(font-lock-type-face ((((class color)) (:foreground "orange"))))
+; '(font-lock-comment-face ((((class color)) (:foreground "cadetblue"))))
+; '(font-lock-function-name-face ((((class color)) (:foreground "darkgoldenrod"))))
+; '(highlight ((((class color)) (:background "dimgray"))) t)
+; '(modeline ((t (:foreground "goldenrod" :background "midnight blue"))) t)
+; '(zmacs-region ((((class color)) (:background "dimgray"))) t))
+
+
+;; Esc-Esc - Auto complete
+;;(global-set-key "\e\e" 'dabbrev-expand)
+(global-set-key "\e\e" 'hippie-expand)
+;; Overwrite dabbrev-expand to hippie-expand
+(global-set-key (kbd "M-/") 'hippie-expand)
+
+
+;;(setq frame-icon-title-format "XEmacs")
+(if (equal frame-title-format "%S: %b")
+    ;; avoid interfering with the "-wn" argument.
+    (setq frame-title-format
+	  (concat "XEmacs ("
+		  (user-real-login-name)
+		  "@"(getenv "HOSTNAME")
+		  "): %b")
+	  ))
+
+
+;;;; ********************
+;;;; func-menu is a package that scans your source file for function
+;;;; definitions and makes a menubar entry that lets you jump to any
+;;;; particular function definition by selecting it from the menu.  The
+;;;; following code turns this on for all of the recognized languages.
+;;;; Scanning the buffer takes some time, but not much.
+;;;;
+;;;; Send bug reports, enhancements etc to:
+;;;; David Hughes <ukchugd@ukpmr.cs.philips.nl>
+;;;;
+;(cond (running-xemacs
+;       (require 'func-menu)
+;       (define-key global-map 'f8 'function-menu)
+;       (add-hook 'find-file-hooks 'fume-add-menubar-entry)
+;       (define-key global-map "\C-cl" 'fume-list-functions)
+;       (define-key global-map "\C-cg" 'fume-prompt-function-goto)
+;
+;       ;; The Hyperbole information manager package uses (shift button2) and
+;       ;; (shift button3) to provide context-sensitive mouse keys.  If you
+;       ;; use this next binding, it will conflict with Hyperbole's setup.
+;       ;; Choose another mouse key if you use Hyperbole.
+;       (define-key global-map '(shift button3) 'mouse-function-menu)
+;
+;       ;; For descriptions of the following user-customizable variables,
+;       ;; type C-h v <variable>
+;       (setq fume-max-items 25
+;             fume-fn-window-position 3
+;             fume-auto-position-popup t
+;             fume-display-in-modeline-p t
+;             fume-menubar-menu-location "File"
+;             fume-buffer-name "*Function List*"
+;             fume-no-prompt-on-valid-default nil)
+;       ))
+
+(setq minibuffer-max-depth nil)
+
+(add-to-list 'load-path "/users/lukerob/elisp/color-theme-6.6.0")
+(require 'color-theme)
+(color-theme-initialize)
+(color-theme-deep-blue)
+
+
